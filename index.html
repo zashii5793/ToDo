@@ -411,7 +411,13 @@
     return li;
   }
 
+  var MIN_ROWS = 20; // 最初から用意しておく空行の数（空欄は書き出し・コピー時に自動除外）
+  function ensureMin(which) {
+    var a = state[which];
+    while (a.length < MIN_ROWS) a.push({ text: "", done: false });
+  }
   function render(which) {
+    ensureMin(which);
     var ol = document.getElementById("list-" + which);
     ol.innerHTML = "";
     state[which].forEach(function (item, idx) { ol.appendChild(makeRow(which, item, idx)); });
