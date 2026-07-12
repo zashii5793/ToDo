@@ -3,153 +3,405 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ToDoリスト</title>
+<title>タスク管理 — 理論と実践</title>
 <style>
-  /* ===== 元の todo.html と同じ文書スタイル（見た目はそのまま） ===== */
-  body{
-    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
-    max-width:640px;margin:32px auto;padding:0 22px;
-    color:#1c2733;line-height:1.8;
+  :root{
+    --orange:#d9531e;--orange-d:#b8431584;
+    --red:#d9481f;--blue:#2f74b5;
+    --ink:#1f2a36;--sub:#5b6b7a;--muted:#9aa7b2;
+    --line:#e5eaf0;--bg:#eef1f5;--card:#fff;
   }
-  h1{font-size:20px;margin:0 0 4px;}
-  .stamp{color:#5b6b7a;font-size:12px;margin:0 0 20px;}
-  h2{font-size:16px;border-left:4px solid #c8451f;padding-left:10px;margin:26px 0 8px;}
-  ol{padding-left:24px;margin:0;}
-  li{margin:5px 0;}
-  li.done .txt{text-decoration:line-through;color:#9aa7b2;}
-  li.none{list-style:none;color:#9aa7b2;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;line-height:1.7;}
+  .head{background:linear-gradient(100deg,#d9531e,#e0702f);color:#fff;padding:22px 26px 0;}
+  .head h1{font-size:22px;margin:0 0 14px;font-weight:700;}
+  .tabs{display:flex;gap:6px;}
+  .tab{border:none;background:rgba(255,255,255,.18);color:#fff;font:inherit;font-size:14px;
+    padding:10px 20px;border-radius:10px 10px 0 0;cursor:pointer;}
+  .tab.active{background:var(--bg);color:var(--ink);font-weight:600;}
+  .wrap{max-width:1160px;margin:0 auto;padding:22px 26px 60px;}
 
-  /* ===== 操作用に足した要素（普段は目立たせない） ===== */
-  li.item .txt{outline:none;}
-  li.item .txt:empty::before{content:"やることを入力";color:#b4bec7;}
-  .ctl{float:right;white-space:nowrap;margin-left:12px;opacity:.22;transition:opacity .12s;}
-  li.item:hover .ctl,.ctl:focus-within{opacity:1;}
-  .chk{vertical-align:middle;cursor:pointer;accent-color:#c8451f;}
-  .del{
-    border:none;background:none;color:#9aa7b2;cursor:pointer;
-    font-size:15px;line-height:1;padding:0 2px;margin-left:2px;vertical-align:middle;
-  }
-  .del:hover{color:#c8451f;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
+  .btn{font:inherit;font-size:13.5px;cursor:pointer;border:1px solid var(--line);
+    background:#fff;color:var(--ink);padding:9px 15px;border-radius:9px;}
+  .btn:hover{border-color:var(--orange);color:var(--orange);}
+  .btn.primary{background:var(--orange);border-color:var(--orange);color:#fff;}
+  .btn.primary:hover{background:#bf461a;color:#fff;}
+  .hint{color:var(--sub);font-size:12px;margin:0 0 16px;}
 
-  .add{
-    display:block;margin:6px 0 0 24px;padding:0;
-    border:none;background:none;color:#c8451f;cursor:pointer;
-    font:inherit;font-size:13px;
-  }
-  .add:hover{text-decoration:underline;}
+  .info{background:#fff;border:1px solid var(--line);border-left:4px solid var(--orange);
+    border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;}
+  .info .col{flex:1;min-width:220px;}
+  .info b{display:block;margin-bottom:2px;}
+  .info .arrow{color:var(--muted);font-size:20px;}
+  .info .t{color:var(--sub);font-size:13px;}
 
-  .actions{margin-top:34px;border-top:1px solid #edf1f4;padding-top:18px;
-    display:flex;flex-wrap:wrap;gap:10px;}
-  .actions button{
-    font:inherit;font-size:13px;cursor:pointer;
-    border:1px solid #dfe5ea;background:#fff;border-radius:7px;padding:8px 14px;color:#1c2733;
-  }
-  .actions button:hover{border-color:#c8451f;color:#c8451f;}
-  .actions .primary{background:#c8451f;border-color:#c8451f;color:#fff;}
-  .actions .primary:hover{background:#a83817;color:#fff;}
-  .note{color:#8a97a3;font-size:11.5px;margin-top:14px;line-height:1.7;}
+  .cols{display:flex;gap:20px;align-items:flex-start;}
+  .card{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);
+    border-radius:12px;border-top:4px solid var(--red);padding:18px 18px 20px;
+    box-shadow:0 1px 2px rgba(31,42,54,.04);}
+  .card.tomorrow{border-top-color:var(--blue);}
+  .card h2{font-size:17px;margin:0 0 6px;}
+  .card .desc{color:var(--sub);font-size:12.5px;margin:0 0 10px;}
+  .stat{color:var(--sub);font-size:12.5px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px;}
+  .stat b{color:var(--ink);}
+  .rowbtns{display:flex;gap:8px;margin-bottom:10px;}
+
+  ol.rows{list-style:none;margin:0;padding:0;}
+  .row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:8px;}
+  .row:hover{background:#f7f9fb;}
+  .row.done .rtxt{text-decoration:line-through;color:var(--muted);}
+  .num{width:20px;text-align:right;color:var(--muted);font-size:13px;flex:none;}
+  .grip{color:#c2ccd4;cursor:grab;flex:none;font-size:15px;user-select:none;padding:0 2px;}
+  .grip:active{cursor:grabbing;}
+  .rchk{appearance:none;-webkit-appearance:none;width:20px;height:20px;flex:none;
+    border:2px solid var(--red);border-radius:6px;cursor:pointer;position:relative;background:#fff;}
+  .card.tomorrow .rchk{border-color:var(--blue);}
+  .rchk:checked{background:var(--red);}
+  .card.tomorrow .rchk:checked{background:var(--blue);}
+  .rchk:checked::after{content:"✓";color:#fff;font-size:13px;position:absolute;
+    left:50%;top:50%;transform:translate(-50%,-52%);}
+  .rtxt{flex:1;min-width:0;border:none;background:transparent;font:inherit;color:inherit;
+    outline:none;padding:3px 4px;border-radius:6px;}
+  .rtxt:focus{background:#fff;box-shadow:inset 0 0 0 1px var(--line);}
+  .rtxt:empty::before{content:"やることを入力…";color:#c2ccd4;}
+  .mv,.rm{font:inherit;flex:none;cursor:pointer;border:1px solid var(--line);background:#fff;border-radius:6px;}
+  .mv{font-size:12px;color:var(--sub);padding:3px 8px;}
+  .mv:hover{border-color:var(--blue);color:var(--blue);}
+  .rm{font-size:14px;color:var(--muted);width:26px;height:26px;line-height:1;}
+  .rm:hover{border-color:var(--red);color:var(--red);}
+  .row.dragover{box-shadow:inset 0 2px 0 var(--orange);}
+
+  /* ===== 理論タブ ===== */
+  .theory-body{max-width:900px;}
+  .theory-body.edit{outline:2px dashed var(--orange);outline-offset:8px;border-radius:10px;}
+  .mind{background:#fff;border:1px solid var(--line);border-left:4px solid var(--orange);
+    border-radius:12px;padding:20px 24px;margin-bottom:18px;}
+  .mind .eyebrow{color:var(--orange);font-size:12.5px;font-weight:700;letter-spacing:.02em;margin-bottom:6px;}
+  .mind h2{font-size:19px;margin:0 0 8px;}
+  .mind p{color:#33404c;margin:0;}
+  .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+  .pcard{background:#fff;border:1px solid var(--line);border-top:3px solid var(--orange);
+    border-radius:10px;padding:14px 16px;}
+  .pcard .pnum{color:var(--orange);font-size:12px;font-weight:700;display:block;margin-bottom:4px;}
+  .pcard b{display:block;margin-bottom:4px;font-size:14.5px;}
+  .pcard span{color:var(--sub);font-size:13px;}
+  .principle{background:#fff;border:1px solid var(--line);border-radius:12px;
+    padding:20px 24px;margin-bottom:16px;border-left:4px solid var(--orange);}
+  .principle.p2{border-left-color:#e0913a;} .principle.p3{border-left-color:#3f9d6b;}
+  .principle.p4{border-left-color:#2f74b5;} .principle.p5{border-left-color:#8155c6;}
+  .principle.flowsec{border-left-color:#5b6b7a;}
+  .principle h3{font-size:16px;margin:0 0 6px;}
+  .principle .tag{color:#1f2a36;font-weight:600;margin:0 0 10px;}
+  .principle p{color:#33404c;margin:8px 0;}
+  .action{background:#fff8f4;border:1px solid #f2ddcf;border-radius:8px;padding:10px 14px;font-size:13.5px;}
+  .prog{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0;}
+  .prog .step{background:#f3f6f9;border:1px solid var(--line);border-radius:8px;padding:8px 14px;text-align:center;flex:1;min-width:120px;}
+  .prog .step b{display:block;font-size:13px;} .prog .step span{color:var(--sub);font-size:12.5px;}
+  .prog .ar{color:var(--muted);}
+  .matrix{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;}
+  .q{border-radius:10px;padding:14px 16px;border:1px solid var(--line);}
+  .q .qh{font-size:11.5px;color:var(--sub);display:block;margin-bottom:4px;letter-spacing:.02em;}
+  .q b{display:block;font-size:15px;margin-bottom:4px;} .q span{font-size:13px;color:#33404c;}
+  .q1{background:#fdecea;border-color:#f3c9c2;} .q2{background:#eaf3ec;border-color:#c7e2cf;}
+  .q3{background:#fef6e8;border-color:#f4e2be;} .q4{background:#eef1f5;border-color:#dce2e9;}
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px;}
+  .fstep{background:#f3f6f9;border:1px solid var(--line);border-radius:10px;padding:14px 16px;}
+  .fstep .fh{font-size:13px;font-weight:700;display:block;margin-bottom:4px;}
+  .fstep b{display:block;margin-bottom:4px;} .fstep span{color:var(--sub);font-size:12.5px;}
+  .summary{background:#1f2a36;color:#fff;border-radius:12px;padding:20px 24px;margin-top:18px;}
+  .summary b{font-size:16px;display:block;margin-bottom:6px;} .summary p{margin:0;color:#d7dee6;}
+  @media(max-width:720px){.cards3,.matrix,.flow{grid-template-columns:1fr;}}
+  @media print{.head,.toolbar,.hint{display:none!important;}#pane-theory{display:block!important;}
+    .theory-body{max-width:none;} .principle,.mind,.pcard{break-inside:avoid;}}
+
+  .editing [data-edit]{outline:1px dashed var(--orange);background:#fff8f4;border-radius:4px;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1f2a36;color:#fff;
+    padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9;}
+  .toast.show{opacity:1;}
+
+  @media(max-width:720px){.cols{flex-direction:column;}}
 </style>
 </head>
 <body>
-<h1>ToDoリスト</h1>
-<p class="stamp" id="stamp"></p>
-
-<section>
-  <h2>当日のToDo</h2>
-  <ol id="list-today"></ol>
-  <button class="add" data-add="today">＋ 項目を追加</button>
-</section>
-
-<section>
-  <h2>翌日のToDo</h2>
-  <ol id="list-tomorrow"></ol>
-  <button class="add" data-add="tomorrow">＋ 項目を追加</button>
-</section>
-
-<div class="actions">
-  <button class="primary" id="export">メモ帳用に書き出す（.txt）</button>
-  <button id="carryover">翌日を当日へ繰り越す</button>
-  <button id="clear-done">完了済みを削除</button>
-  <button id="clear-all">すべて消去</button>
+<div class="head">
+  <h1 data-edit="appTitle">タスク管理 — 理論と実践</h1>
+  <div class="tabs">
+    <button class="tab" data-tab="theory">📘 理論</button>
+    <button class="tab active" data-tab="tasks">✅ タスク管理</button>
+  </div>
 </div>
-<p class="note">入力内容はこのブラウザに自動保存されます（サーバーには送信されません）。各項目にマウスを合わせると、完了チェックと削除ボタンが表示されます。「メモ帳用に書き出す」で、メモ帳にそのまま貼れるテキスト（.txt）を保存できます。</p>
+
+<div class="wrap">
+
+  <!-- ===== タスク管理タブ ===== -->
+  <div id="pane-tasks">
+    <div class="toolbar">
+      <button class="btn primary" id="promote">▶ 翌日へ繰り上げ</button>
+      <button class="btn" id="exportHtml">⬇ HTMLで書き出す</button>
+      <button class="btn" id="clearToday">当日をクリア</button>
+      <button class="btn" id="editLabels">✎ 文言を編集</button>
+    </div>
+    <p class="hint">入力は自動保存されます。「HTMLで書き出す」で現在のToDoをファイル保存できます。</p>
+
+    <div class="info">
+      <div class="col"><b data-edit="eveTitle">🌙 終業時（夜）</b><span class="t" data-edit="eveText">今日の残りを右の「翌日ToDo」へ。明日やることを書き出して退勤。</span></div>
+      <div class="arrow">→</div>
+      <div class="col"><b data-edit="mornTitle">☀ 始業前（朝）</b><span class="t" data-edit="mornText">「翌日へ繰り上げ」を押し、ヌケモレ・予定変更・優先順位を並べ替えてから始動。</span></div>
+    </div>
+
+    <div class="cols">
+      <div class="card today">
+        <h2 data-edit="todayTitle">✅ 当日のToDo</h2>
+        <p class="desc" data-edit="todayDesc">書き出す → 済んだらチェックで消込 → 残りは「→翌日」で右へコピー。行はドラッグ（≡）で並べ替え。</p>
+        <div class="stat" id="stat-today"></div>
+        <div class="rowbtns">
+          <button class="btn" data-copy="today">📋 メモ帳用にコピー</button>
+          <button class="btn" data-add="today">＋ 行を追加</button>
+        </div>
+        <ol class="rows" id="list-today"></ol>
+      </div>
+
+      <div class="card tomorrow">
+        <h2 data-edit="tomTitle">📝 翌日のToDo</h2>
+        <p class="desc" data-edit="tomDesc">明日の予定をあらかじめ書き出しておく場所。翌朝ここを当日へ繰り上げます。</p>
+        <div class="stat" id="stat-tomorrow"></div>
+        <div class="rowbtns">
+          <button class="btn" data-copy="tomorrow">📋 メモ帳用にコピー</button>
+          <button class="btn" data-add="tomorrow">＋ 行を追加</button>
+        </div>
+        <ol class="rows" id="list-tomorrow"></ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 理論タブ ===== -->
+  <div id="pane-theory" style="display:none">
+    <div class="toolbar">
+      <button class="btn" id="thEdit">✎ 編集モード</button>
+      <button class="btn" id="thPdf">⬇ PDF出力</button>
+      <button class="btn" id="thReset">元に戻す</button>
+    </div>
+    <p class="hint">「編集モード」で本文を直接書き換え → 自動保存。PDF出力は印刷画面から「PDFで保存」を選んでください。</p>
+
+    <div class="theory-body" id="theoryBody">
+      <div class="mind">
+        <div class="eyebrow">MINDSET ｜ タスク管理は「成長のトレーニング」</div>
+        <h2>忘れないための作業ではない。毎日、確実に速くなるための習慣。</h2>
+        <p>タスク管理の目的は、抜け漏れをなくすことだけではありません。昨日より少し多く、少し速く、少し確実に片付けられるようになること ―― つまり自分を鍛えることです。以下の5つは、仕事のできる人が自然にやっているクセ。1つずつ、身につけていきましょう。</p>
+      </div>
+
+      <div class="cards3">
+        <div class="pcard"><span class="pnum">原則①</span><b>さっさと片付ける</b><span>迷う時間がいちばんのムダ。手をつけられるものは即動く。</span></div>
+        <div class="pcard"><span class="pnum">原則②</span><b>早め早めに、念には念を</b><span>前倒しで着手し、出す前に見直す。締切間際は事故る。</span></div>
+        <div class="pcard"><span class="pnum">原則③</span><b>大きい仕事は早く着手</b><span>時間のかかるものほど、先に手をつけて転がしておく。</span></div>
+      </div>
+
+      <section class="principle p1">
+        <h3>原則① ｜ さっさと片付ける</h3>
+        <p class="tag">迷っている時間が、いちばんのムダ。</p>
+        <p>手をつけられるものは、考え込む前に動く。とくに2分で終わることは、その場で即処理する（GTDの「2分ルール」）。先延ばしは、頭の片隅を占領し続けるだけでなく、「あとでやる」たびに思い出すコストが複利で膨らみます。速い人は、判断も着手も速い。</p>
+        <p class="action"><b>明日からの一手：</b>タスクを見たら「これ、今すぐ終わる？」と一度自問。YESなら即着手。迷ったら5秒で決める。</p>
+      </section>
+
+      <section class="principle p2">
+        <h3>原則② ｜ 早め早めに、念には念を</h3>
+        <p class="tag">締切間際は、事故る。早ければ、やり直せる。</p>
+        <p>人は作業時間を楽観的に見積もるクセがあります（計画錯誤）。だから「たぶん間に合う」はたいてい間に合わない。前倒しで着手しておけば、想定外が起きても立て直す余地が残ります。そして提出前のひと呼吸の見直しが、ミスの大半を防ぎます。早く出して、二重に確かめる ―― これが信頼をつくります。</p>
+        <p class="action"><b>明日からの一手：</b>本当の締切の「1日前」に自分締切を置く。出す前に、必ず一度だけ見直す。</p>
+      </section>
+
+      <section class="principle p3">
+        <h3>原則③ ｜ 時間のかかるものから早く着手</h3>
+        <p class="tag">大きな石は、先に入れる。</p>
+        <p>期間のかかるタスクほど、後回しにすると詰みます。コツは「終わらせる」ではなく、まず「着手する」こと。大物を小さく割り、今日はその最初の一歩だけ触る。動き出してさえいれば、あとは少しずつ転がります。着手が早いほど、相談・修正の時間も稼げます。</p>
+        <p class="action"><b>明日からの一手：</b>期日の遠い大物こそ、今日「15分だけ」手をつける。分解して、最初の一歩をToDoに書く。</p>
+      </section>
+
+      <section class="principle p4">
+        <h3>原則④ ｜ 毎日ちょっとずつ増やす</h3>
+        <p class="tag">10個できたら、次は11個。成長は「複利」で効く。</p>
+        <p>処理量は、測れば伸ばせる。まずは1日の完了数を数えるところから（このツールの「完了◯件」がそのまま使えます）。昨日より1つ多く。毎日たった1%の改善でも、積み上がれば1年で約37倍の差になります。派手な一発ではなく、小さな更新を毎日続けた人が、気づけば遠くにいます。</p>
+        <div class="prog">
+          <div class="step"><b>今週</b><span>1日 10個 消化</span></div>
+          <div class="ar">→</div>
+          <div class="step"><b>来週</b><span>1日 11個へ</span></div>
+          <div class="ar">→</div>
+          <div class="step"><b>再来週</b><span>1日 12個へ</span></div>
+          <div class="ar">→</div>
+          <div class="step"><b>数ヶ月後</b><span>地力が変わる</span></div>
+        </div>
+        <p class="action"><b>明日からの一手：</b>今日の完了数をメモする。今週の目標は「先週の自分より1つ多く」。人とではなく、昨日の自分と比べる。</p>
+      </section>
+
+      <section class="principle p5">
+        <h3>原則⑤ ｜ 優先順位で「捨てる」</h3>
+        <p class="tag">全部やろうとしない。重要なことに時間を空ける。</p>
+        <p>速く回すには、まずやらないことを決めるのが先。緊急度×重要度で仕分け、「重要だが急がない」仕事（②）に時間を作れる人が伸びます。ここは準備・改善・学びの領域 ―― まさに原則③（早い着手）と原則④（毎日の成長）が育つ場所です。</p>
+        <div class="matrix">
+          <div class="q q1"><span class="qh">緊急 × 重要</span><b>①すぐやる</b><span>締切間近・トラブル。最優先で今日片づける。</span></div>
+          <div class="q q2"><span class="qh">重要 × 急がない</span><b>②計画してやる</b><span>準備・改善・学び。ここに時間を割ける人が伸びる。</span></div>
+          <div class="q q3"><span class="qh">緊急 × 重要でない</span><b>③任せる/減らす</b><span>頼まれごと・割り込み。人に振れないか考える。</span></div>
+          <div class="q q4"><span class="qh">急がない × 重要でない</span><b>④やめる</b><span>なんとなくの作業。思い切って手放す。</span></div>
+        </div>
+      </section>
+
+      <section class="principle flowsec">
+        <h3>1日の回し方 ｜ 夜に書き出し、朝に見直す</h3>
+        <p class="tag">仕組みが習慣になれば、忘れは自然に消える。</p>
+        <p>5原則を毎日回すための「型」です。難しくありません。決まった時間に、同じことをするだけ。</p>
+        <div class="flow">
+          <div class="fstep"><span class="fh">🌙 夜</span><b>書き出す</b><span>終業時に、翌日のToDoを右側へ全部書き出して退勤。頭を空にする。</span></div>
+          <div class="fstep"><span class="fh">☀ 朝</span><b>見直す</b><span>始業前の3分で、ヌケモレ・予定変更・優先順位を並べ替える。</span></div>
+          <div class="fstep"><span class="fh">🏃 日中</span><b>さっさと消す</b><span>上から片付け、済んだらチェック。迷ったら即着手。</span></div>
+          <div class="fstep"><span class="fh">🌙 締め</span><b>数えて振り返る</b><span>完了数を確認し、残りを翌日へ。今日の自分を1つ超えられたか。</span></div>
+        </div>
+      </section>
+
+      <div class="summary">
+        <b>まとめ ―― 早く、こまめに、少しずつ多く。</b>
+        <p>さっさと片付け、早め早めに動き、大きい仕事は先に着手し、毎日ちょっとずつ量を増やす。この積み重ねが、確実な成長になります。</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 (function () {
   "use strict";
-  var KEY = "todo-list-v1";
+  var KEY = "taskmgr-v1";
+  var DEFAULT_LABELS = {};
+  document.querySelectorAll("[data-edit]").forEach(function (el) {
+    DEFAULT_LABELS[el.getAttribute("data-edit")] = el.textContent;
+  });
+
   var state = load();
 
   function load() {
-    try { var r = localStorage.getItem(KEY); if (r) return JSON.parse(r); } catch (e) {}
-    return { today: [], tomorrow: [] };
+    try {
+      var r = localStorage.getItem(KEY);
+      if (r) {
+        var s = JSON.parse(r);
+        s.today = s.today || []; s.tomorrow = s.tomorrow || []; s.labels = s.labels || {};
+        return s;
+      }
+    } catch (e) {}
+    return { today: [], tomorrow: [], labels: {} };
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
   function pad(n) { return (n < 10 ? "0" : "") + n; }
   function ymd(d) { return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate(); }
   function stampText(d) {
     return ymd(d) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
   }
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.classList.add("show");
+    setTimeout(function () { t.classList.remove("show"); }, 1600);
+  }
 
-  function render(which) {
-    var ol = document.getElementById("list-" + which);
-    var items = state[which];
-    ol.innerHTML = "";
-    if (!items.length) {
-      var none = document.createElement("li");
-      none.className = "none";
-      none.textContent = "（記入なし）";
-      ol.appendChild(none);
-      return;
-    }
-    items.forEach(function (item, idx) {
-      var li = document.createElement("li");
-      li.className = "item" + (item.done ? " done" : "");
-
-      // 操作コントロール（右側・普段は薄い）
-      var ctl = document.createElement("span");
-      ctl.className = "ctl";
-      ctl.setAttribute("contenteditable", "false");
-
-      var chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.className = "chk";
-      chk.checked = !!item.done;
-      chk.title = "完了にする";
-      chk.addEventListener("change", function () { item.done = chk.checked; save(); render(which); });
-
-      var del = document.createElement("button");
-      del.className = "del";
-      del.type = "button";
-      del.setAttribute("aria-label", "削除");
-      del.textContent = "×";
-      del.addEventListener("click", function () { state[which].splice(idx, 1); save(); render(which); });
-
-      ctl.appendChild(chk);
-      ctl.appendChild(del);
-
-      // 本文（そのまま編集できる）
-      var txt = document.createElement("span");
-      txt.className = "txt";
-      txt.setAttribute("contenteditable", "true");
-      txt.textContent = item.text;
-      txt.addEventListener("input", function () { item.text = txt.textContent; save(); });
-      txt.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); txt.blur(); add(which); }
-      });
-
-      li.appendChild(ctl);   // float:right なので先に置く
-      li.appendChild(txt);
-      ol.appendChild(li);
+  /* ---------- labels ---------- */
+  function applyLabels() {
+    document.querySelectorAll("[data-edit]").forEach(function (el) {
+      var k = el.getAttribute("data-edit");
+      if (state.labels[k] != null) el.textContent = state.labels[k];
     });
   }
 
-  function add(which) {
+  /* ---------- rows ---------- */
+  function makeRow(which, item, idx) {
+    var li = document.createElement("li");
+    li.className = "row" + (item.done ? " done" : "");
+    li.dataset.idx = idx;
+
+    var num = document.createElement("span");
+    num.className = "num"; num.textContent = (idx + 1);
+
+    var grip = document.createElement("span");
+    grip.className = "grip"; grip.textContent = "≡"; grip.title = "ドラッグで並べ替え";
+    grip.addEventListener("mousedown", function () { li.draggable = true; });
+    grip.addEventListener("mouseup", function () { li.draggable = false; });
+
+    var chk = document.createElement("input");
+    chk.type = "checkbox"; chk.className = "rchk"; chk.checked = !!item.done;
+    chk.title = "完了にする";
+    chk.addEventListener("change", function () { item.done = chk.checked; save(); render(which); });
+
+    var txt = document.createElement("span");
+    txt.className = "rtxt"; txt.setAttribute("contenteditable", "true");
+    txt.textContent = item.text;
+    txt.addEventListener("input", function () { item.text = txt.textContent; save(); updateStat(which); });
+    txt.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); txt.blur(); addRow(which); }
+    });
+
+    li.appendChild(num); li.appendChild(grip); li.appendChild(chk); li.appendChild(txt);
+
+    if (which === "today") {
+      var mv = document.createElement("button");
+      mv.className = "mv"; mv.type = "button"; mv.textContent = "→翌日";
+      mv.title = "翌日ToDoへコピー";
+      mv.addEventListener("click", function () {
+        state.tomorrow.push({ text: item.text, done: false });
+        save(); render("tomorrow"); toast("翌日へコピーしました");
+      });
+      li.appendChild(mv);
+    }
+
+    var rm = document.createElement("button");
+    rm.className = "rm"; rm.type = "button"; rm.textContent = "×"; rm.setAttribute("aria-label", "削除");
+    rm.addEventListener("click", function () { state[which].splice(idx, 1); save(); render(which); });
+    li.appendChild(rm);
+
+    /* drag & drop reorder */
+    li.addEventListener("dragstart", function (e) {
+      li.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", idx);
+    });
+    li.addEventListener("dragend", function () {
+      li.classList.remove("dragging"); li.draggable = false;
+      document.querySelectorAll(".row.dragover").forEach(function (r) { r.classList.remove("dragover"); });
+    });
+    li.addEventListener("dragover", function (e) { e.preventDefault(); li.classList.add("dragover"); });
+    li.addEventListener("dragleave", function () { li.classList.remove("dragover"); });
+    li.addEventListener("drop", function (e) {
+      e.preventDefault();
+      var from = parseInt(e.dataTransfer.getData("text/plain"), 10);
+      var to = idx;
+      if (isNaN(from) || from === to) return;
+      var arr = state[which];
+      var moved = arr.splice(from, 1)[0];
+      arr.splice(to, 0, moved);
+      save(); render(which);
+    });
+
+    return li;
+  }
+
+  function render(which) {
+    var ol = document.getElementById("list-" + which);
+    ol.innerHTML = "";
+    state[which].forEach(function (item, idx) { ol.appendChild(makeRow(which, item, idx)); });
+    updateStat(which);
+  }
+  function updateStat(which) {
+    var arr = state[which];
+    var filled = arr.filter(function (i) { return i.text.trim() !== ""; }).length;
+    var done = arr.filter(function (i) { return i.done; }).length;
+    document.getElementById("stat-" + which).innerHTML =
+      "記入 <b>" + filled + "</b> 件 ／ 完了 <b>" + done + "</b> 件";
+  }
+  function addRow(which) {
     state[which].push({ text: "", done: false });
     save(); render(which);
-    // 追加した末尾項目にフォーカス
     var ol = document.getElementById("list-" + which);
-    var last = ol.querySelector("li.item:last-child .txt");
+    var last = ol.querySelector(".row:last-child .rtxt");
     if (last) {
       last.focus();
       var r = document.createRange(); r.selectNodeContents(last); r.collapse(false);
@@ -157,62 +409,137 @@
     }
   }
 
-  function sectionText(title, items) {
-    var lines = ["【" + title + "】"];
-    var real = items.filter(function (it) { return it.text.trim() !== ""; });
-    if (!real.length) { lines.push("（記入なし）"); }
-    else {
-      real.forEach(function (it, i) {
-        lines.push((i + 1) + ". " + (it.done ? "[x]" : "[ ]") + " " + it.text);
-      });
-    }
+  /* ---------- メモ帳用にコピー ---------- */
+  function colToText(which) {
+    var title = which === "today" ? "当日のToDo" : "翌日のToDo";
+    var lines = ["■ " + title + "（" + ymd(new Date()) + "）"];
+    var real = state[which].filter(function (i) { return i.text.trim() !== ""; });
+    if (!real.length) lines.push("（記入なし）");
+    else real.forEach(function (i, n) { lines.push((n + 1) + ". " + (i.done ? "☑ " : "☐ ") + i.text); });
     return lines.join("\r\n");
   }
-
-  function exportTxt() {
-    var now = new Date();
-    var text = [
-      "■ ToDoリスト",
-      "書き出し日時：" + stampText(now),
-      "",
-      sectionText("当日のToDo", state.today),
-      "",
-      sectionText("翌日のToDo", state.tomorrow),
-      ""
-    ].join("\r\n");
-    // UTF-8 BOM を付与し、Windows のメモ帳で文字化けせず開けるようにする
-    var blob = new Blob(["﻿" + text], { type: "text/plain;charset=utf-8" });
-    var fname = "todo_" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + ".txt";
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url; a.download = fname;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  function copyText(text, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast(okMsg); },
+        function () { fallbackCopy(text, okMsg); });
+    } else { fallbackCopy(text, okMsg); }
+  }
+  function fallbackCopy(text, okMsg) {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast(okMsg); } catch (e) { toast("コピーに失敗しました"); }
+    document.body.removeChild(ta);
   }
 
-  document.querySelectorAll("[data-add]").forEach(function (b) {
-    b.addEventListener("click", function () { add(b.getAttribute("data-add")); });
-  });
-  document.getElementById("export").addEventListener("click", exportTxt);
-  document.getElementById("carryover").addEventListener("click", function () {
-    if (!state.tomorrow.length) return;
-    if (!confirm("翌日のToDoを当日へ移動します。よろしいですか？")) return;
-    state.today = state.today.concat(state.tomorrow);
+  /* ---------- HTMLで書き出す（既存フォーマット互換） ---------- */
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function sectionHtml(title, items) {
+    var real = items.filter(function (i) { return i.text.trim() !== ""; });
+    var lis;
+    if (!real.length) lis = '<li class="none">（記入なし）</li>';
+    else lis = real.map(function (i) {
+      return '<li class="' + (i.done ? "done" : "") + '">' + esc(i.text) + "</li>";
+    }).join("");
+    return "<section><h2>" + title + "</h2><ol>" + lis + "</ol></section>";
+  }
+  function exportHtml() {
+    var now = new Date();
+    var html = '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ToDoリスト</title>' +
+      '<style>body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;max-width:640px;margin:32px auto;padding:0 22px;color:#1c2733;line-height:1.8;}' +
+      'h1{font-size:20px;margin:0 0 4px;}.stamp{color:#5b6b7a;font-size:12px;margin:0 0 20px;}' +
+      'h2{font-size:16px;border-left:4px solid #c8451f;padding-left:10px;margin:26px 0 8px;}' +
+      'ol{padding-left:24px;margin:0;}li{margin:5px 0;}li.done{text-decoration:line-through;color:#9aa7b2;}' +
+      'li.none{list-style:none;color:#9aa7b2;}</style></head><body>' +
+      '<h1>ToDoリスト</h1><p class="stamp">書き出し日時：' + stampText(now) + '</p>' +
+      sectionHtml("当日のToDo", state.today) +
+      sectionHtml("翌日のToDo", state.tomorrow) +
+      '</body></html>';
+    var blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    var fname = "todo_" + now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + ".html";
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    toast("HTMLを書き出しました");
+  }
+
+  /* ---------- toolbar ---------- */
+  document.getElementById("promote").addEventListener("click", function () {
+    if (!state.tomorrow.length) { toast("翌日ToDoは空です"); return; }
+    if (!confirm("翌日ToDoを当日ToDoへ繰り上げます。よろしいですか？")) return;
+    state.today = state.today.concat(state.tomorrow.map(function (i) { return { text: i.text, done: false }; }));
     state.tomorrow = [];
-    save(); render("today"); render("tomorrow");
+    save(); render("today"); render("tomorrow"); toast("当日へ繰り上げました");
   });
-  document.getElementById("clear-done").addEventListener("click", function () {
-    state.today = state.today.filter(function (i) { return !i.done; });
-    state.tomorrow = state.tomorrow.filter(function (i) { return !i.done; });
-    save(); render("today"); render("tomorrow");
+  document.getElementById("clearToday").addEventListener("click", function () {
+    if (!confirm("当日ToDoをすべて消去します。よろしいですか？")) return;
+    state.today = []; save(); render("today");
   });
-  document.getElementById("clear-all").addEventListener("click", function () {
-    if (!confirm("すべてのToDoを消去します。よろしいですか？")) return;
-    state = { today: [], tomorrow: [] };
-    save(); render("today"); render("tomorrow");
+  document.getElementById("exportHtml").addEventListener("click", exportHtml);
+
+  var editing = false;
+  document.getElementById("editLabels").addEventListener("click", function () {
+    editing = !editing;
+    document.body.classList.toggle("editing", editing);
+    document.querySelectorAll("[data-edit]").forEach(function (el) {
+      el.setAttribute("contenteditable", editing ? "true" : "false");
+    });
+    this.textContent = editing ? "✓ 編集を終える" : "✎ 文言を編集";
+    if (!editing) {
+      document.querySelectorAll("[data-edit]").forEach(function (el) {
+        state.labels[el.getAttribute("data-edit")] = el.textContent;
+      });
+      save(); toast("文言を保存しました");
+    }
   });
 
-  document.getElementById("stamp").textContent = "本日：" + ymd(new Date());
+  document.querySelectorAll("[data-add]").forEach(function (b) {
+    b.addEventListener("click", function () { addRow(b.getAttribute("data-add")); });
+  });
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var which = b.getAttribute("data-copy");
+      copyText(colToText(which), "メモ帳用にコピーしました");
+    });
+  });
+
+  /* ---------- 理論タブ：編集モード / PDF / 元に戻す ---------- */
+  var theoryBody = document.getElementById("theoryBody");
+  var DEFAULT_THEORY = theoryBody.innerHTML;
+  if (state.theoryHtml) theoryBody.innerHTML = state.theoryHtml;
+
+  var thEditing = false;
+  document.getElementById("thEdit").addEventListener("click", function () {
+    thEditing = !thEditing;
+    theoryBody.setAttribute("contenteditable", thEditing ? "true" : "false");
+    theoryBody.classList.toggle("edit", thEditing);
+    this.textContent = thEditing ? "✓ 編集を終える" : "✎ 編集モード";
+    if (!thEditing) { state.theoryHtml = theoryBody.innerHTML; save(); toast("本文を保存しました"); }
+    else { theoryBody.focus(); }
+  });
+  document.getElementById("thPdf").addEventListener("click", function () { window.print(); });
+  document.getElementById("thReset").addEventListener("click", function () {
+    if (!confirm("理論タブの本文を初期状態に戻します。よろしいですか？")) return;
+    theoryBody.innerHTML = DEFAULT_THEORY;
+    delete state.theoryHtml; save(); toast("初期状態に戻しました");
+  });
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll(".tab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll(".tab").forEach(function (x) { x.classList.remove("active"); });
+      t.classList.add("active");
+      var tab = t.getAttribute("data-tab");
+      document.getElementById("pane-tasks").style.display = (tab === "tasks") ? "" : "none";
+      document.getElementById("pane-theory").style.display = (tab === "theory") ? "" : "none";
+    });
+  });
+
+  applyLabels();
   render("today");
   render("tomorrow");
 })();
