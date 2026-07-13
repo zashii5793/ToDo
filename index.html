@@ -365,7 +365,9 @@
     txt.textContent = item.text;
     txt.addEventListener("input", function () { item.text = txt.textContent; save(); updateStat(which); });
     txt.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") {
+      // IME（日本語入力）の変換確定Enterは無視する。
+      // e.isComposing / keyCode 229 は変換中を表し、ここで確定文字が次行へ漏れるのを防ぐ。
+      if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault();
         // Enter で「次の行」へ進む。最終行なら新規行を追加してそこへ。
         if (idx + 1 < state[which].length) focusRowAt(which, idx + 1);
