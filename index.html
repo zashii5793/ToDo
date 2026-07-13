@@ -216,6 +216,7 @@
       <div class="mind">
         <div class="eyebrow">MINDSET ｜ タスク管理は「成長のトレーニング」</div>
         <h2>忘れないための作業ではない。毎日、確実に速くなるための習慣。</h2>
+        <p><b>タスク管理の意義は、信頼を損なわないため。</b>約束したことを、約束した品質で、約束した期日に返す ―― その一つひとつの積み重ねが、周囲からの信頼をつくります。抜け漏れや遅れは、その信頼を静かに削っていきます。だからこそ、タスクを確実に回すことが土台になります。</p>
         <p>タスク管理の目的は、抜け漏れをなくすことだけではありません。昨日より少し多く、少し速く、少し確実に片付けられるようになること ―― つまり自分を鍛えることです。以下の5つは、仕事のできる人が自然にやっているクセ。1つずつ、身につけていきましょう。</p>
       </div>
 
@@ -364,7 +365,12 @@
     txt.textContent = item.text;
     txt.addEventListener("input", function () { item.text = txt.textContent; save(); updateStat(which); });
     txt.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); txt.blur(); addRow(which); }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        // Enter で「次の行」へ進む。最終行なら新規行を追加してそこへ。
+        if (idx + 1 < state[which].length) focusRowAt(which, idx + 1);
+        else addRow(which);
+      }
     });
 
     li.appendChild(num); li.appendChild(grip); li.appendChild(chk); li.appendChild(txt);
@@ -374,8 +380,9 @@
       mv.className = "mv"; mv.type = "button"; mv.textContent = "→翌日";
       mv.title = "翌日ToDoへコピー";
       mv.addEventListener("click", function () {
-        state.tomorrow.push({ text: item.text, done: false });
-        save(); render("tomorrow"); toast("翌日へコピーしました");
+        // 末尾ではなく先頭へ追加する（最初の行に繰り越す）。
+        state.tomorrow.unshift({ text: item.text, done: false });
+        save(); render("tomorrow"); toast("翌日の先頭へ繰り越しました");
       });
       li.appendChild(mv);
     }
@@ -430,16 +437,19 @@
     document.getElementById("stat-" + which).innerHTML =
       "記入 <b>" + filled + "</b> 件 ／ 完了 <b>" + done + "</b> 件";
   }
+  function focusRowAt(which, idx) {
+    var ol = document.getElementById("list-" + which);
+    var rows = ol.querySelectorAll(".rtxt");
+    var el = rows[idx];
+    if (!el) return;
+    el.focus();
+    var r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  }
   function addRow(which) {
     state[which].push({ text: "", done: false });
     save(); render(which);
-    var ol = document.getElementById("list-" + which);
-    var last = ol.querySelector(".row:last-child .rtxt");
-    if (last) {
-      last.focus();
-      var r = document.createRange(); r.selectNodeContents(last); r.collapse(false);
-      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
-    }
+    focusRowAt(which, state[which].length - 1);
   }
 
   /* ---------- メモ帳用にコピー ---------- */
